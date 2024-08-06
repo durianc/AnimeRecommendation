@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动漫推荐系统</title>
+    
+     <!-- 引入Bootstrap的CSS和JS -->
+     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <style>
+        body {
+            padding: 30px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>动漫推荐系统</h1>
+
+        <div class="form-group">
+            <label for="userId">用户ID:</label>
+            <input type="number" id="userId" class="form-control" placeholder="输入用户ID">
+        </div>
+        <button id="recommendBtn" class="btn btn-primary">获取推荐</button>
+
+        <h2 class="mt-5">推荐的动漫:</h2>
+        <ul id="recommendations" class="list-group"></ul>
+
+        <HR align=center width=95% color=#987cb9 SIZE=1>
+        <!----------------------------------------------------------------------------------------->
+        <div class="form-group mt-5">
+            <label for="animeId">动漫ID:</label>
+            <input type="number" id="animeId" class="form-control" placeholder="输入动漫ID">
+        </div>
+        <button id="similarBtn" class="btn btn-secondary">获取相似动漫</button>
+        
+        <h2 class="mt-5">相似的动漫:</h2>
+        <ul id="similarRecommendations" class="list-group"></ul>
+        <hr align="center" width="95%" color="#987cb9" size="1">
+        
+        <!-- 模态窗口 -->
+        <div class="modal fade" id="animeModal" tabindex="-1" role="dialog" aria-labelledby="animeModalLabel" aria-hidden="true">
+          <div class="modal-dialog" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="animeModalLabel">动漫详情</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <div class="modal-body" id="animeModalBody">
+                <!-- 动漫详情将会显示在这里 -->
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!----------------------------------------------------------------------------------------->
+        <div class="form-group mt-5">
+            <label for="detailAnimeId">动漫详情ID:</label>
+            <input type="number" id="detailAnimeId" class="form-control" placeholder="输入动漫详情ID">
+        </div>
+        <button id="detailBtn" class="btn btn-success">获取动漫详情</button>
+        
+        <h2 class="mt-5">动漫详情:</h2>
+        <div id="animeDetail" class="card" style="display: none;">
+            <img id="detailImage" class="card-img-top" alt="动漫图片" style="display: none; width: 200px; height: auto;"> <!-- 初始状态为隐藏 -->
+            <div class="card-body">
+                <h5 class="card-title" id="detailTitle"></h5>
+                <p class="card-text" id="detailEpisodes"></p>
+                <p class="card-text" id="detailGenre"></p>
+                <p class="card-text" id="detailMembers"></p>
+                <p class="card-text" id="detailRating"></p>
+                <p class="card-text" id="detailType"></p>
+                <p class="card-text" id="detailAired"></p> <!-- 播出时间 -->
+            </div>
+        </div>
+        
+    </div>
+
+    <script>
+        // 获取推荐的动漫
+        document.getElementById('recommendBtn').addEventListener('click', function() {
+            const userId = document.getElementById('userId').value;
+            fetch(`http://localhost:5003/recommends/${userId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const recommendationsList = document.getElementById('recommendations');
+                    recommendationsList.innerHTML = ''; // 清空当前列表
+                    if (data.length === 0) {
+                        recommendationsList.innerHTML = '<li class="list-group-item">没有推荐的动漫</li>';
+                    } else {
+                        data.forEach(anime => {
+                            const listItem = document.createElement('li');
+                            listItem.className = 'list-group-item';
+                            listItem.textContent = anime.title; // 假设anime对象有title属性
+                            recommendationsList.appendChild(listItem);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('获取推荐时出错:', error);
+                });
+        });
+
+        // 获取相似动漫
+        document.getElementById('similarBtn').addEventListener('click', function() {
+            const animeId = document.getElementById('animeId').value;
+            fetch(`http://localhost:5003/sim/${animeId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('网络错误');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const similarRecommendationsList = document.getElementById('similarRecommendations');
+                    similarRecommendationsList.innerHTML = ''; // 清空当前列表
+                    if (data.length === 0) {
+                        similarRecommendationsList.innerHTML = '<li class="list-group-item">没有相似的动漫</li>';
+                    } else {
+                        data.forEach(anime => {
+                            const listItem = document.createElement('li');
+                            listItem.className = 'list-group-item';
+                            listItem.textContent = anime.name;
+                            
+                            // 点击事件，显示模态窗口并展示详细信息
+                            listItem.addEventListener('click', function() {
+                                const modalBody = document.getElementById('animeModalBody');
+                                modalBody.innerHTML = `
+                                    <strong>名称:</strong> ${anime.name} <br>
+                                    <strong>集数:</strong> ${anime.episodes} <br>
+                                    <strong>类型:</strong> ${anime.genre} <br>
+                                    <strong>成员:</strong> ${anime.members} <br>
+                                    <strong>评分:</strong> ${anime.rating} <br>
+                                    <strong>类型:</strong> ${anime.type}
+                                `;
+                                $('#animeModal').modal('show');
+                            });
+
+                            similarRecommendationsList.appendChild(listItem);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('获取相似动漫时出错:', error);
+                });
+        });
+
+
+        // 获取动漫详情
+        document.getElementById('detailBtn').addEventListener('click', function() {
+            const animeId = document.getElementById('detailAnimeId').value;
+            fetch(`http://localhost:5003/anime/${animeId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('网络错误');
+                    }
+                    return response.json();
+                })
+                .then(anime => {
+                    // 更新动漫详情的 DOM 元素
+                    document.getElementById('detailTitle').textContent = anime.name || '';
+
+                    // 处理集数
+                    document.getElementById('detailEpisodes').textContent = anime.episodes ? `集数: ${anime.episodes}` : '';
+                    
+                    // 处理类型
+                    document.getElementById('detailGenre').textContent = anime.genre ? `类型: ${anime.genre}` : '';
+                    
+                    // 处理成员数
+                    document.getElementById('detailMembers').textContent = anime.members ? `成员: ${anime.members}` : '';
+                    
+                    // 处理评分
+                    document.getElementById('detailRating').textContent = anime.rating ? `评分: ${anime.rating}` : '';
+                    
+                    // 处理类型(Anime Type)
+                    document.getElementById('detailType').textContent = anime.type ? `类型: ${anime.type}` : '';
+
+                    // 处理播出时间
+                    document.getElementById('detailAired').textContent = anime.aired ? `播出时间: ${anime.aired}` : '';
+
+                    // 处理图片URL
+                    const imageElement = document.getElementById('detailImage');
+                    if (anime.image_url) {
+                        imageElement.src = anime.image_url; // 更新动漫图片
+                        imageElement.style.display = 'block'; // 显示图片
+                    } else {
+                        imageElement.style.display = 'none'; // 隐藏图片
+                    }
+
+                    // 显示动漫详情
+                    document.getElementById('animeDetail').style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('获取动漫详情时出错:', error);
+                    document.getElementById('animeDetail').style.display = 'none'; // 隐藏动漫详情
+                });
+        });
+        
+
+
+    </script>
+</body>
+</html>
