@@ -11,7 +11,7 @@ redis = Redis(
     host=redis_config['host'],  # 设置Redis服务器的主机地址
     port=redis_config['port'],  # 设置Redis服务器的端口号
     db=redis_config['db'],  # 设置Redis数据库索引
-    password=redis_config['passwd']  # 设置Redis服务器的密码
+    password=redis_config['password']  # 设置Redis服务器的密码
 )
 
 # 定义Redis key，用于存储物品和用户的嵌入向量
